@@ -1,7 +1,7 @@
 from tkinter import font
 from tkinter import *
 
-TIMESTEP = 5
+TIMESTEP = 10
 
 print("hello world\n")
 
