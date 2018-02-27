@@ -64,6 +64,7 @@ class MiThread(threading.Thread):
             global clients  
             print("Background thread checking server status")
             print("  client count: " + str(len(clients)))
+            broadcast(bytes("Server is still running - hi there", "utf-8"))
             time.sleep(2)
 
 
@@ -74,8 +75,6 @@ if __name__ == "__main__":
     ACCEPT_THREAD = Thread(target=accept_incoming_connections)
     t.start()    
     ACCEPT_THREAD.start()  # Starts the infinite loop.
-    
-    
     
     ACCEPT_THREAD.join()
     SERVER.close()

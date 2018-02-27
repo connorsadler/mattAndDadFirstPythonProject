@@ -43,14 +43,13 @@ class ChatClient():
         if msg == "{quit}":
             self.client_socket.close()
 
-my_msg = None
 msg_list = None
 
 def uiOnMessage(msg):
     msg_list.insert(tkinter.END, msg)
+    msg_list.yview(tkinter.END) # scroll to end
 
 def initUI(chatClient):
-    global my_msg
     global msg_list
     
     top = tkinter.Tk()
@@ -67,7 +66,7 @@ def initUI(chatClient):
     msg_list.pack()
     messages_frame.pack()
     
-    def uiDoSend():
+    def uiDoSend(event=None):
         msg = my_msg.get()
         my_msg.set("")  # Clears input field.
         chatClient.send(msg)
