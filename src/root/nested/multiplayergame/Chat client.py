@@ -20,6 +20,7 @@ class ChatClient():
         
         ADDR = (HOST, PORT)
 
+        # onMessageCallback is a function which will be called on every message we receive e.g. to update user interface
         self.onMessageCallback = onMessageCallback
         
         self.client_socket = socket(AF_INET, SOCK_STREAM)
@@ -45,6 +46,8 @@ class ChatClient():
 
 msg_list = None
 
+# We'll set this up to be called by our ChatClient on every message
+# It just pokes the message into our user interface
 def uiOnMessage(msg):
     msg_list.insert(tkinter.END, msg)
     msg_list.yview(tkinter.END) # scroll to end
@@ -57,7 +60,7 @@ def initUI(chatClient):
     
     messages_frame = tkinter.Frame(top)
     my_msg = tkinter.StringVar()  # For the messages to be sent.
-    my_msg.set("Type your messages here.")
+    my_msg.set("")
     scrollbar = tkinter.Scrollbar(messages_frame)  # To navigate through past messages.
     # Following will contain the messages.
     msg_list = tkinter.Listbox(messages_frame, height=15, width=50, yscrollcommand=scrollbar.set)
@@ -74,6 +77,7 @@ def initUI(chatClient):
     entry_field = tkinter.Entry(top, textvariable=my_msg)
     entry_field.bind("<Return>", uiDoSend)
     entry_field.pack()
+    entry_field.focus()
     send_button = tkinter.Button(top, text="Send", command=uiDoSend)
     send_button.pack()
 
