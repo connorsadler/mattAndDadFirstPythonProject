@@ -20,7 +20,7 @@ fpsClock = pygame.time.Clock()
 #variables for the map size
 TILESIZE  = 3
 MAPWIDTH  = 100
-MAPHEIGHT = 30
+MAPHEIGHT = 100
 
 #the position of the player [x,y]
 playerPos = [0,0]
@@ -192,13 +192,11 @@ while True:
 #             DISPLAYSURF.blit(textures[tilemap[row][column]], (column*TILESIZE,row*TILESIZE))
         
     #display the player at the correct position 
-    DISPLAYSURF.blit(PLAYER,(playerPos[0] * TILESIZE,
-                             playerPos[1] * TILESIZE)
+    DISPLAYSURF.blit(PLAYER,(playerPos[0] * TILESIZE, playerPos[1] * TILESIZE)
                      )
     # display all other players
     for otherPlayer in otherPlayersById.values():
-        DISPLAYSURF.blit(PLAYER,(otherPlayer.location[0] * TILESIZE,
-                                 otherPlayer.location[1] * TILESIZE)
+        DISPLAYSURF.blit(OTHERPLAYER,(otherPlayer.location[0] * TILESIZE, otherPlayer.location[1] * TILESIZE)
                          )
         
 

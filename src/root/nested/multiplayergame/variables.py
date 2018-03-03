@@ -68,6 +68,7 @@ WHITE = (255,   255,   255)
 #----------------
 
 PLAYER = pygame.image.load('player.png')
+OTHERPLAYER = pygame.image.load('otherplayer.png')
 
 
 #rules to make new objects
