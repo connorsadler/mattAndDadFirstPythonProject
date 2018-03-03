@@ -5,47 +5,59 @@ from threading import Thread
 import threading
 import time
 import random
+from netutils import *
 
 clients = {}
 addresses = {}
 HOST = ''
 PORT = 33000
-BUFSIZ = 1024
 ADDR = (HOST, PORT)
 SERVER = socket(AF_INET, SOCK_STREAM)
 SERVER.bind(ADDR)
 
+nextClientId = 1
+
 def accept_incoming_connections():
+    global nextClientId
+    
     """Sets up handling for incoming clients."""
     while True:
         client, client_address = SERVER.accept()
         print("%s:%s has connected." % client_address)
+        
         client.send(bytes("Welcome to ... chatroom!\n"+
                           "Now type your name and press enter!", "utf8"))
+
+        print("The client is clientId: " + str(nextClientId))
+        client.send(bytes("MINECRAFT: YOURCLIENTID: " + str(nextClientId), "utf8"))
+        nextClientId += 1
+        
         addresses[client] = client_address
         Thread(target=handle_client, args=(client,)).start()
 
 def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
-    name = client.recv(BUFSIZ).decode("utf8")
+    firstMessageFromClient = client.recv(BUFSIZ_FIRSTMESSAGE).decode("utf8")
+    name = firstMessageFromClient.rstrip() # Trim trailing spaces
     welcome = 'Welcome %s! If you ever want to quit, type {quit} to exit.' % name
     client.send(bytes(welcome, "utf8"))
-    msg = "%s has joined the chat!" % name
-    broadcast(bytes(msg, "utf8"))
+    broadcast("%s has joined the chat!" % name)
     clients[client] = name
     while True:
         msg = client.recv(BUFSIZ)
         if msg != bytes("{quit}", "utf8"):
+            # Normal message from client
             handleMessageFromClient(name)
             broadcast(msg, name+": ")
         else:
+            # QUIT message
             try:
                 client.send(bytes("{quit}", "utf8"))
             except ConnectionResetError:
                 print("send to client failed - ignoring")
             client.close()
             del clients[client]
-            broadcast(bytes("%s has left the chat." % name, "utf8"))
+            broadcast("%s has left the chat." % name)
             break
 
 def broadcast(msg, prefix=""):  # prefix is for name identification.
@@ -114,7 +126,7 @@ def serverTick():
     wordIndex = random.randint(0, len(mylist)-1)
     randomWord = mylist[wordIndex]
     # tell players the new word
-    broadcast("Please type the word: " + randomWord)
+#     broadcast("Please type the word: " + randomWord)
     
 def broadcastScores():
     scoresString = ""

@@ -1,17 +1,15 @@
 from tkinter import font
 from tkinter import *
 
+from chatclientlibrary import *
+
 TIMESTEP = 10
 
 print("gameclient starts")
 
-
-
-
-
- #----------------------------
-# Minecraft 2D
-#----------------------------
+#--------------------------------------------------
+# Minecraft 2D - Heavily modified for multiplayer
+#--------------------------------------------------
 
 import pygame, sys, random
 from pygame.locals import *
@@ -26,6 +24,17 @@ MAPHEIGHT = 30
 
 #the position of the player [x,y]
 playerPos = [0,0]
+# player id (aka client id) -> Player
+otherPlayersById = {}
+
+class Player():
+    def __init__(self, playerId, name):
+        self.playerId = playerId
+        self.name = name
+        self.location = [0, 0]
+    
+    def setLocation(self, x, y):
+        self.location = [x, y]
 
 #use list comprehension to create our tilemap
 #tilemap = [ [DIRT for w in range(MAPWIDTH)] for h in range(MAPHEIGHT) ] 
@@ -52,10 +61,81 @@ DISPLAYSURF = pygame.display.set_mode((MAPWIDTH * TILESIZE, MAPHEIGHT*TILESIZE))
 #         #set the position in the tilemap to the randomly chosen tile
 #         tilemap[rw][cl] = tile
 
+# Allow you to hold keys down to move continually
 pygame.key.set_repeat(5)
+
+myClientId = "None" 
+serverEvents = []
+
+def gameOnMessage(msg):
+    # Processing these in the background (socket) thread doesn't seem to work very well
+    serverEvents.append(msg)
+
+def gameOnMessage_mainThread(msg):
+    global myClientId
+    print("gameOnMessage_mainThread: message from server: " + msg)
+    idx = msg.find("MINECRAFT:")
+    if idx != -1:
+        msgMinecraft = msg[idx:]
+        msgParts = msgMinecraft.split(": ")
+        if msgParts[1] == "YOURCLIENTID":
+            print("gameOnMessage_mainThread: YOURCLIENTID: " + msgParts[2])
+            myClientId = msgParts[2]
+            setMyClientId(myClientId)
+        elif msgParts[1] == "PLAYERUPDATE":
+            handlePlayerUpdate(msgParts[2:])
+
+def handlePlayerUpdate(msgPartsSub):
+    print("handlePlayerUpdate: " + str(msgPartsSub))
+    playerId = msgPartsSub[0]
+    if playerId == myClientId:
+        # Its me - ignore
+        return
+    
+    # it's someone else
+
+    # PLAYERCONNECTED
+    # TODO: Parse name? We already have their id
+    if msgPartsSub[1] == "PLAYERCONNECTED":
+        print("handlePlayerUpdate: Connect other player")
+        newPlayer = Player(playerId, "other")
+        otherPlayersById[playerId] = newPlayer
+        return
+    
+    # ['4', 'PLAYERMOVED', '[0, 8]']
+    if msgPartsSub[1] == "PLAYERMOVED":
+        print("handlePlayerUpdate: Move other player")
+        otherPlayer = otherPlayersById[playerId]
+        newLocationStr = msgPartsSub[2].replace("[","").replace("]","")
+        newLocationXY = newLocationStr.split(",")
+        otherPlayer.setLocation(int(newLocationXY[0]), int(newLocationXY[1]))
+    
+    print("handlePlayerUpdate: Not sure how to handle: " + str(msgPartsSub))
+                  
+def setMyClientId(myClientIdNew):
+    global myClientId
+    myClientId = myClientIdNew
+    pygame.display.set_caption("gameclient - " + myClientId)
+    # Usually we have already received the YOURCLIENTID message and set our clientId, so we send that 
+    # as first message back to chatroom, thussetting our name
+    chatClient.send("PLAYER" + myClientId, BUFSIZ_FIRSTMESSAGE)
+    # Now tell all clients that new player has connected
+    chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERCONNECTED")
+
+# Connect to server
+chatClient = ChatClient()
+HOST = 'localhost'
+PORT = '33000'
+
+chatClient.connect(HOST, PORT, gameOnMessage)
+
+# Alternate "client id" could be local port that we're connecting o
+# myClientId2 = chatClient.getClientId()
+# print("myClientId2: " + myClientId2)
+                      
+pygame.display.set_caption("gameclient - " + myClientId)
                       
 while True:
-
     #fill the background in black        
     DISPLAYSURF.fill(BLACK)
 
@@ -65,22 +145,37 @@ while True:
         if event.type == QUIT:
             #and the game and close the window
             pygame.quit()
+            chatClient.send("{quit}")
             sys.exit()
         #if a key is pressed
         elif event.type == KEYDOWN:
+            moved = False
             #if the right arrow is pressed
             if event.key == K_RIGHT and playerPos[0] < MAPWIDTH - 1:
                 #change the player's x position
                 playerPos[0] += 1
+                moved = True
             if event.key == K_LEFT and playerPos[0] > 0:
                 #change the player's x position
                 playerPos[0] -= 1
+                moved = True
             if event.key == K_UP and playerPos[1] > 0:
                 #change the player's x position
                 playerPos[1] -= 1
+                moved = True
             if event.key == K_DOWN and playerPos[1] < MAPHEIGHT -1:
                 #change the player's x position
                 playerPos[1] += 1
+                moved = True
+
+            if moved:
+                chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERMOVED: " + str(playerPos))
+
+    if len(serverEvents) > 0:
+        serverEventsCopy = list(serverEvents)
+        serverEvents.clear()
+        for serverEvent in serverEventsCopy:
+            gameOnMessage_mainThread(serverEvent)
                     
 #     #loop through each row
 #     for row in range(MAPHEIGHT):
@@ -93,6 +188,12 @@ while True:
     DISPLAYSURF.blit(PLAYER,(playerPos[0] * TILESIZE,
                              playerPos[1] * TILESIZE)
                      )
+    # display all other players
+    for otherPlayer in otherPlayersById.values():
+        DISPLAYSURF.blit(PLAYER,(otherPlayer.location[0] * TILESIZE,
+                                 otherPlayer.location[1] * TILESIZE)
+                         )
+        
 
     #update the display
     pygame.display.update()

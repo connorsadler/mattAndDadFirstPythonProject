@@ -1,48 +1,9 @@
 #!/usr/bin/env python3
 """Script for Tkinter GUI chat client."""
-from socket import AF_INET, socket, SOCK_STREAM
-from threading import Thread
+
 import tkinter
 
-BUFSIZ = 1024
-
-class ChatClient():
-    def __init__(self):
-        print("ChatClient is being constructed\n")
-        self.client_socket = None
-        self.receive_thread = None
-    
-    def connect(self, HOST, PORT, onMessageCallback):
-        if not PORT:
-            PORT = 33000
-        else:
-            PORT = int(PORT)
-        
-        ADDR = (HOST, PORT)
-
-        # onMessageCallback is a function which will be called on every message we receive e.g. to update user interface
-        self.onMessageCallback = onMessageCallback
-        
-        self.client_socket = socket(AF_INET, SOCK_STREAM)
-        self.client_socket.connect(ADDR)
-        
-        self.receive_thread = Thread(target=self.receive)
-        self.receive_thread.start()
-        
-    def receive(self):
-        """Handles receiving of messages."""
-        while True:
-            try:
-                msg = self.client_socket.recv(BUFSIZ).decode("utf8")
-                self.onMessageCallback(msg)
-            except OSError:  # Possibly client has left the chat.
-                break
-    
-    def send(self, msg):  # event is passed by binders.
-        """Handles sending of messages."""
-        self.client_socket.send(bytes(msg, "utf8"))
-        if msg == "{quit}":
-            self.client_socket.close()
+from chatclientlibrary import *
 
 msg_list = None
 
@@ -63,7 +24,7 @@ def initUI(chatClient):
     my_msg.set("")
     scrollbar = tkinter.Scrollbar(messages_frame)  # To navigate through past messages.
     # Following will contain the messages.
-    msg_list = tkinter.Listbox(messages_frame, height=15, width=50, yscrollcommand=scrollbar.set)
+    msg_list = tkinter.Listbox(messages_frame, height=30, width=100, yscrollcommand=scrollbar.set)
     scrollbar.pack(side=tkinter.RIGHT, fill=tkinter.Y)
     msg_list.pack(side=tkinter.LEFT, fill=tkinter.BOTH)
     msg_list.pack()
@@ -88,15 +49,24 @@ def initUI(chatClient):
         top.quit()
     top.protocol("WM_DELETE_WINDOW", on_closing)
 
-chatClient = ChatClient()
-initUI(chatClient)
 
-#----Now comes the sockets part----
-#HOST = input('Enter host: ')
-#PORT = input('Enter port: ')
-HOST = 'localhost'
-PORT = '33000'
 
-chatClient.connect(HOST, PORT, uiOnMessage)
 
-tkinter.mainloop()  # Starts GUI execution.
+if __name__ == '__main__':
+    
+    chatClient = ChatClient()
+    
+    # This is the code running when you run this file directly
+    print("Start of main code")
+    initUI(chatClient)
+    
+    #----Now comes the sockets part----
+    #HOST = input('Enter host: ')
+    #PORT = input('Enter port: ')
+    HOST = 'localhost'
+    PORT = '33000'
+    
+    chatClient.connect(HOST, PORT, uiOnMessage)
+    
+    tkinter.mainloop()  # Starts GUI execution.
+    print("End of main code")
