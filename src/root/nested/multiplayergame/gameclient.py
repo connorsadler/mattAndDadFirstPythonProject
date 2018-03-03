@@ -102,10 +102,17 @@ def handlePlayerUpdate(msgPartsSub):
         otherPlayersById[playerId] = newPlayer
         return
     
+    # TODO: Hack to get an unknown player inside our client
+    if playerId not in otherPlayersById:
+        print("handlePlayerUpdate: Hack to create unknown other player")
+        newPlayer = Player(playerId, "other")
+        otherPlayersById[playerId] = newPlayer
+    
+    otherPlayer = otherPlayersById[playerId]
+    
     # ['4', 'PLAYERMOVED', '[0, 8]']
     if msgPartsSub[1] == "PLAYERMOVED":
         print("handlePlayerUpdate: Move other player")
-        otherPlayer = otherPlayersById[playerId]
         newLocationStr = msgPartsSub[2].replace("[","").replace("]","")
         newLocationXY = newLocationStr.split(",")
         otherPlayer.setLocation(int(newLocationXY[0]), int(newLocationXY[1]))
