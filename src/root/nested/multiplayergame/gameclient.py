@@ -95,7 +95,7 @@ def handlePlayerUpdate(msgPartsSub):
     # it's someone else
 
     # PLAYERCONNECTED
-    # TODO: Parse name? We already have their id
+    # TODO: Parse other player's name? We already have their id if required
     if msgPartsSub[1] == "PLAYERCONNECTED":
         print("handlePlayerUpdate: Connect other player")
         newPlayer = Player(playerId, "other")
