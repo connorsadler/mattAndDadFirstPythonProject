@@ -28,10 +28,6 @@ def accept_incoming_connections():
         client.send(bytes("Welcome to ... chatroom!\n"+
                           "Now type your name and press enter!", "utf8"))
 
-        print("The client is clientId: " + str(nextClientId))
-        client.send(bytes("MINECRAFT: YOURCLIENTID: " + str(nextClientId), "utf8"))
-        nextClientId += 1
-        
         addresses[client] = client_address
         Thread(target=handle_client, args=(client,)).start()
 
@@ -126,7 +122,7 @@ def serverTick():
     wordIndex = random.randint(0, len(mylist)-1)
     randomWord = mylist[wordIndex]
     # tell players the new word
-#     broadcast("Please type the word: " + randomWord)
+    broadcast("Please type the word: " + randomWord)
     
 def broadcastScores():
     scoresString = ""

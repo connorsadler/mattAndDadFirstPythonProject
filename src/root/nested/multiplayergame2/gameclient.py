@@ -24,6 +24,8 @@ MAPHEIGHT = 100
 
 #the position of the player [x,y]
 playerPos = [0,0]
+automove = False
+autoMoveMode = 0
 # player id (aka client id) -> Player
 otherPlayersById = {}
 
@@ -101,12 +103,19 @@ def handlePlayerUpdate(msgPartsSub):
         newPlayer = Player(playerId, "other")
         otherPlayersById[playerId] = newPlayer
         return
-    
+
     # TODO: Hack to get an unknown player inside our client
     if playerId not in otherPlayersById:
         print("handlePlayerUpdate: Hack to create unknown other player")
         newPlayer = Player(playerId, "other")
         otherPlayersById[playerId] = newPlayer
+
+    # PLAYERDISCONNECTED
+    if msgPartsSub[1] == "PLAYERDISCONNECTED":
+        print("handlePlayerUpdate: Disconnect other player")
+        # Simply remove the other player from our list of other players
+        del otherPlayersById[playerId]
+        return
     
     otherPlayer = otherPlayersById[playerId]
     
@@ -129,6 +138,26 @@ def setMyClientId(myClientIdNew):
     # Now tell all clients that new player has connected
     chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERCONNECTED")
 
+def doAutomove(playerPos):
+    global autoMoveMode
+    if autoMoveMode == 1:
+        playerPos[0] += 1
+        if playerPos[0] >= MAPWIDTH - 8:
+            autoMoveMode += 1
+    elif autoMoveMode == 2:
+        playerPos[1] += 1
+        if playerPos[1] >= MAPHEIGHT - 8:
+            autoMoveMode += 1
+    elif autoMoveMode == 3:
+        playerPos[0] -= 1
+        if playerPos[0] <= 1:
+            autoMoveMode += 1
+    elif autoMoveMode == 4:
+        playerPos[1] -= 1
+        if playerPos[1] <= 1:
+            autoMoveMode = 1
+    return playerPos
+
 # Connect to server
 chatClient = ChatClient()
 HOST = 'localhost'
@@ -146,17 +175,19 @@ while True:
     #fill the background in black        
     DISPLAYSURF.fill(BLACK)
 
+    moved = False
+
     #get all the user events
     for event in pygame.event.get():
         #if the user wants to quit
         if event.type == QUIT:
             #and the game and close the window
             pygame.quit()
+            chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERDISCONNECTED")
             chatClient.send("{quit}")
             sys.exit()
         #if a key is pressed
         elif event.type == KEYDOWN:
-            moved = False
             #if the right arrow is pressed
             if event.key == K_RIGHT and playerPos[0] < MAPWIDTH - 1:
                 #change the player's x position
@@ -174,9 +205,17 @@ while True:
                 #change the player's x position
                 playerPos[1] += 1
                 moved = True
+            if event.key == K_SPACE:
+                automove = not automove
+                if automove:
+                    autoMoveMode = 1
 
-            if moved:
-                chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERMOVED: " + str(playerPos))
+    if automove:
+        doAutomove(playerPos)
+        moved = True
+
+    if moved:
+        chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERMOVED: " + str(playerPos))
 
     if len(serverEvents) > 0:
         serverEventsCopy = list(serverEvents)
