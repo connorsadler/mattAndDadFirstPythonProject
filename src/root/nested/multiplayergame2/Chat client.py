@@ -2,19 +2,27 @@
 """Script for Tkinter GUI chat client."""
 
 import tkinter
+import sys
 
 from chatclientlibrary import *
 
 msg_list = None
+top = None
 
 # We'll set this up to be called by our ChatClient on every message
 # It just pokes the message into our user interface
 def uiOnMessage(msg):
+    print("msg length: " + str(len(msg)) + " - " + msg)
     msg_list.insert(tkinter.END, msg)
     msg_list.yview(tkinter.END) # scroll to end
 
+def uiOnQuit():
+    top.quit()
+    sys.exit()
+
 def initUI(chatClient):
     global msg_list
+    global top
     
     top = tkinter.Tk()
     top.title("Chatter")
@@ -46,7 +54,7 @@ def initUI(chatClient):
         """This function is to be called when the window is closed."""
         print("client is closing\n")
         chatClient.send("{quit}")
-        top.quit()
+        
     top.protocol("WM_DELETE_WINDOW", on_closing)
 
 
@@ -66,7 +74,7 @@ if __name__ == '__main__':
     HOST = 'localhost'
     PORT = '33000'
     
-    chatClient.connect(HOST, PORT, uiOnMessage)
+    chatClient.connect(HOST, PORT, uiOnMessage, uiOnQuit)
     
     tkinter.mainloop()  # Starts GUI execution.
     print("End of main code")

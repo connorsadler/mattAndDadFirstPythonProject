@@ -1,5 +1,6 @@
 from tkinter import font
 from tkinter import *
+import sys
 
 from chatclientlibrary import *
 
@@ -73,6 +74,9 @@ def gameOnMessage(msg):
     # Processing these in the background (socket) thread doesn't seem to work very well
     serverEvents.append(msg)
 
+def gameOnQuit():
+    sys.exit()
+
 def gameOnMessage_mainThread(msg):
     global myClientId
     print("gameOnMessage_mainThread: message from server: " + msg)
@@ -125,6 +129,7 @@ def handlePlayerUpdate(msgPartsSub):
         newLocationStr = msgPartsSub[2].replace("[","").replace("]","")
         newLocationXY = newLocationStr.split(",")
         otherPlayer.setLocation(int(newLocationXY[0]), int(newLocationXY[1]))
+        return
     
     print("handlePlayerUpdate: Not sure how to handle: " + str(msgPartsSub))
                   
@@ -163,7 +168,7 @@ chatClient = ChatClient()
 HOST = 'localhost'
 PORT = '33000'
 
-chatClient.connect(HOST, PORT, gameOnMessage)
+chatClient.connect(HOST, PORT, gameOnMessage, gameOnQuit)
 
 # Alternate "client id" could be local port that we're connecting o
 # myClientId2 = chatClient.getClientId()

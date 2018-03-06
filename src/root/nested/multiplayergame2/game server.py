@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Server for multithreaded (asynchronous) chat application."""
+
+#
+# Server for multithreaded (asynchronous) chat application
+# 
+
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 import threading
 import time
 import random
+import sys
 from netutils import *
 
 clients = {}
@@ -15,40 +20,61 @@ ADDR = (HOST, PORT)
 SERVER = socket(AF_INET, SOCK_STREAM)
 SERVER.bind(ADDR)
 
-nextClientId = 1
+def printex(msg):
+    threadName = threading.currentThread().name
+    print(threadName + " - " + msg)
 
-def accept_incoming_connections():
-    global nextClientId
+class ServerBackgroundAcceptClientConnectionsThread(threading.Thread):
+    def __init__(self):
+        self.nextClientId = 1
+        threading.Thread.__init__(self)
     
-    """Sets up handling for incoming clients."""
-    while True:
-        client, client_address = SERVER.accept()
-        print("%s:%s has connected." % client_address)
+    def run(self):
+        threading.currentThread().name = "[ServerBackgroundAcceptClientConnectionsThread]"
+        self.accept_incoming_connections()
         
-        client.send(bytes("Welcome to ... chatroom!\n"+
-                          "Now type your name and press enter!", "utf8"))
+    def accept_incoming_connections(self):
+        """Sets up handling for incoming clients."""
+        while True:
+            client, client_address = SERVER.accept()
+            print("%s:%s has connected." % client_address)
+            
+            client.send(bytes("Welcome one".ljust(BUFSIZ), "utf8"))
+            client.send(bytes("Welcome two".ljust(BUFSIZ), "utf8"))
+            client.send(bytes("Welcome three".ljust(BUFSIZ), "utf8"))
+            client.send(bytes("Welcome to ... chatroom!".ljust(BUFSIZ), "utf8"))
+            client.send(bytes("Now type your name and press enter!".ljust(BUFSIZ), "utf8"))
+    
+            print("The client is clientId: " + str(self.nextClientId))
+            client.send(bytes("MINECRAFT: YOURCLIENTID: " + str(self.nextClientId), "utf8"))
+            self.nextClientId += 1
+            
+            addresses[client] = client_address
+            Thread(target=handle_client, args=(client,)).start()
 
-        print("The client is clientId: " + str(nextClientId))
-        client.send(bytes("MINECRAFT: YOURCLIENTID: " + str(nextClientId), "utf8"))
-        nextClientId += 1
-        
-        addresses[client] = client_address
-        Thread(target=handle_client, args=(client,)).start()
-
-def handle_client(client):  # Takes client socket as argument.
-    """Handles a single client connection."""
+#
+# Handles a single client connection
+# Runs in a separate thread
+# Takes client socket as argument.
+#
+def handle_client(client):
     firstMessageFromClient = client.recv(BUFSIZ_FIRSTMESSAGE).decode("utf8")
     name = firstMessageFromClient.rstrip() # Trim trailing spaces
     welcome = 'Welcome %s! If you ever want to quit, type {quit} to exit.' % name
     client.send(bytes(welcome, "utf8"))
+    
     broadcast("%s has joined the chat!" % name)
     clients[client] = name
+    threading.currentThread().name = "[Thread for Client: " + name + "]"
+    
     while True:
         msg = client.recv(BUFSIZ)
         if msg != bytes("{quit}", "utf8"):
             # Normal message from client
+            # 1 - send it to our game logic code
             handleMessageFromClient(name)
-            broadcast(msg, name+": ")
+            # 2 - send it to all clients
+            broadcast(msg.ljust(BUFSIZ), name + ": ")
         else:
             # QUIT message
             try:
@@ -60,30 +86,47 @@ def handle_client(client):  # Takes client socket as argument.
             broadcast("%s has left the chat." % name)
             break
 
-def broadcast(msg, prefix=""):  # prefix is for name identification.
-    """Broadcasts a message to all the clients."""
-    print('message broadcast: ', msg)
-    for sock in clients:
+lock = threading.Lock()
+
+#
+# Broadcasts a message to all the clients
+# prefix is for name identification.
+#
+def broadcast(msg, prefix=""):  
+    threadName = threading.currentThread().name
+    print(threadName + ' >>> broadcast: ', msg)
+
+    # prevent multiple client processing threads broadcasting at the same time
+    with lock:
         # if msg is a string then we turn it into bytes
         msgBytes = msg
         if isinstance(msgBytes, str):
             msgBytes = bytes(msgBytes, "utf8")
         # msg will now be bytes
-        try:
-            sock.send(bytes(prefix, "utf8") + msgBytes)
-        except ConnectionResetError:
-            print("ConnectionResetError - skipping this client")
+        
+        # send to all clients
+        for sock in clients:
+            try:
+                sock.send(bytes(prefix, "utf8") + msgBytes)
+            except ConnectionResetError:
+                print("ConnectionResetError - skipping this client")
+    
+    print(threadName + ' <<< broadcast: ', msg)
 
-
-class MiThread(threading.Thread):   
+#
+# Server background game logic thread
+# Any server side game logic runs in this thread
+#
+class ServerBackgroundGameLogicThread(threading.Thread):   
     def __init__(self):
         threading.Thread.__init__(self)
 
     def run(self):
+        threading.currentThread().name = "[ServerBackgroundGameLogicThread]"
         while True:
             global clients
-            print("Background thread checking server status")
-            print("  client count: " + str(len(clients)))
+            printex("Background thread checking server status")
+            printex("  client count: " + str(len(clients)))
             broadcast("Server is still running - hi there")
             serverTick()
             time.sleep(5)
@@ -143,10 +186,10 @@ def broadcastScores():
 if __name__ == "__main__":
     SERVER.listen(5)  # Listens for 5 connections at max.
     print("Waiting for connection...")
-    t = MiThread()     
-    ACCEPT_THREAD = Thread(target=accept_incoming_connections)
-    t.start()    
-    ACCEPT_THREAD.start()  # Starts the infinite loop.
+    t = ServerBackgroundGameLogicThread()     
+    ACCEPT_THREAD = ServerBackgroundAcceptClientConnectionsThread()
+    t.start()
+    ACCEPT_THREAD.start()
     
     ACCEPT_THREAD.join()
     SERVER.close()

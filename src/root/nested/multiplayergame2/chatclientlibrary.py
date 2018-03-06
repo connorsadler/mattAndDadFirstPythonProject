@@ -2,15 +2,13 @@ from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 from netutils import *
 
-BUFSIZ = 1024
-
 class ChatClient():
     def __init__(self):
         print("ChatClient is being constructed\n")
         self.client_socket = None
         self.receive_thread = None
     
-    def connect(self, HOST, PORT, onMessageCallback):
+    def connect(self, HOST, PORT, onMessageCallback, onQuitCallback):
         if not PORT:
             PORT = 33000
         else:
@@ -20,6 +18,7 @@ class ChatClient():
 
         # onMessageCallback is a function which will be called on every message we receive e.g. to update user interface
         self.onMessageCallback = onMessageCallback
+        self.onQuitCallback = onQuitCallback
         
         self.client_socket = socket(AF_INET, SOCK_STREAM)
         self.client_socket.connect(ADDR)
@@ -40,19 +39,21 @@ class ChatClient():
                 self.onMessageCallback(msg)
             except OSError:  # Possibly client has left the chat.
                 break
-    
-    def send(self, msg, padToLength = -1):  # event is passed by binders.
-        """Handles sending of messages."""
+
+    # Handles sending of messages
+    # Optionally pads the message to a certain length
+    # event is passed by binders
+    def send(self, msg, padToLength = -1):
         print("ChatClient sending: " + msg)
         if padToLength > 0:
             msg = msg.ljust(padToLength)
-            print("Padding to length: " + str(padToLength))
             
         #         msg += EOM
         
         self.client_socket.send(bytes(msg, "utf8"))
         if msg == "{quit}":
             self.client_socket.close()
+            self.onQuitCallback()
 
 
 
