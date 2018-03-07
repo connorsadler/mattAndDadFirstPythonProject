@@ -83,7 +83,7 @@ def gameOnMessage_mainThread(msg):
     idx = msg.find("MINECRAFT:")
     if idx != -1:
         msgMinecraft = msg[idx:]
-        msgParts = msgMinecraft.split(": ")
+        msgParts = msgMinecraft.rstrip().split(": ")
         if msgParts[1] == "YOURCLIENTID":
             print("gameOnMessage_mainThread: YOURCLIENTID: " + msgParts[2])
             myClientId = msgParts[2]

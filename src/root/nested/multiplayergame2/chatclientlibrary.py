@@ -46,11 +46,13 @@ class ChatClient():
     def send(self, msg, padToLength = -1):
         print("ChatClient sending: " + msg)
         if padToLength > 0:
-            msg = msg.ljust(padToLength)
+            msg2 = msg.ljust(padToLength)
+        else:
+            msg2 = msg.ljust(BUFSIZ)
             
         #         msg += EOM
         
-        self.client_socket.send(bytes(msg, "utf8"))
+        self.client_socket.send(bytes(msg2, "utf8"))
         if msg == "{quit}":
             self.client_socket.close()
             self.onQuitCallback()
