@@ -69,6 +69,7 @@ WHITE = (255,   255,   255)
 
 PLAYER = pygame.image.load('player.png')
 OTHERPLAYER = pygame.image.load('otherplayer.png')
+BOMB = pygame.image.load('bomb_sprite_sheet.png')
 
 
 #rules to make new objects

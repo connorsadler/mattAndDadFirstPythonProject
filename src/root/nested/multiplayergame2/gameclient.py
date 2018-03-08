@@ -1,20 +1,18 @@
 from tkinter import font
 from tkinter import *
 import sys
-
+import inputboxlibrary
 from chatclientlibrary import *
-
-TIMESTEP = 10
-
-print("gameclient starts")
+import pygame, sys, random
+from pygame.locals import *
+from variables import *
+import random
 
 #--------------------------------------------------
 # Minecraft 2D - Heavily modified for multiplayer
 #--------------------------------------------------
 
-import pygame, sys, random
-from pygame.locals import *
-from variables import *
+print("gameclient starts")
 
 fpsClock = pygame.time.Clock()
 
@@ -23,12 +21,20 @@ TILESIZE  = 3
 MAPWIDTH  = 100
 MAPHEIGHT = 100
 
+FPS = 24
+TIMESTEP = 10  # not sure what this is
+
+black = (0,0,0)
+red = (150,10,15)
+redbright = (250,10,15)
+
 #the position of the player [x,y]
 playerPos = [0,0]
 automove = False
 autoMoveMode = 0
 # player id (aka client id) -> Player
 otherPlayersById = {}
+sprites = [ ]
 
 class Player():
     def __init__(self, playerId, name):
@@ -38,13 +44,102 @@ class Player():
     
     def setLocation(self, x, y):
         self.location = [x, y]
+    
+    def getLocation(self):
+        return self.location
+
+def drawText(gameDisplay, text, pos, font, colour):
+    #font = pygame.font.SysFont(None, fontsize)
+    t = font.render(text, True, colour)
+    gameDisplay.blit(t,pos)
+
+class Sprite():
+    def __init__(self, pos):
+        self.pos = pos
+    
+    def drawAndUpdate(self, DISPLAYSURF):
+        pygame.draw.rect(DISPLAYSURF, black, [self.pos[0], self.pos[1], 20, 20])
+    
+    def isDead(self):
+        return False;
+    
+    def onDeathSpawn(self):
+        return [];
+    
+class SpeechBubble(Sprite):
+    def __init__(self, text, pos):
+        super().__init__(pos)
+        self.text = text
+        self.font = pygame.font.SysFont(None, 30)
+        self.timer = 3 * FPS
+        self.colorredbright = [255,10,15]
+    
+    def drawAndUpdate(self, DISPLAYSURF):
+        drawText(DISPLAYSURF, self.text, self.pos, self.font, (self.colorredbright[0], self.colorredbright[1], self.colorredbright[2]))
+        self.timer -= 1
+        self.colorredbright[0] -= 3
+        if self.timer % 2 == 0:
+            self.pos = (self.pos[0], self.pos[1] + 1)
+    
+    def isDead(self):
+        return self.timer <= 0 or self.colorredbright[0] < 50
+
+BOMB_FRAME_WIDTH = 24
+
+class Bomb(Sprite):
+    def __init__(self, pos):
+        super().__init__(pos)
+        self.timer = 100
+        # crop rect
+        cropx,cropy = 0,29  # Change value to crop different rect areas
+        self.cropRect = (cropx, cropy, 22, 27)
+    
+    def drawAndUpdate(self, DISPLAYSURF):
+        DISPLAYSURF.blit(BOMB,(self.pos[0] * TILESIZE, self.pos[1] * TILESIZE), self.cropRect)
+        self.timer -= 1
+        
+        # shake
+        xvel = self.timer % 3 + -1
+        yvel = 1 - (self.timer % 3)
+        self.pos = (self.pos[0] + xvel, self.pos[1] + yvel)
+        
+        # every 25 frames, move the crop rect along the image so it shows a different part of the source bomb image
+        # this is effectively a differently coloured bomb image frame
+        if self.timer % 25 == 0:
+            self.cropRect = (self.cropRect[0] + BOMB_FRAME_WIDTH, self.cropRect[1], self.cropRect[2], self.cropRect[3])
+
+    def isDead(self):
+        return self.timer <= 0
+
+    def onDeathSpawn(self):
+        return [BombFragment(self.pos, 5, 0), BombFragment(self.pos, -5, 0),
+                BombFragment(self.pos, 0, 5), BombFragment(self.pos, 0, -5)
+               ];
+
+class BombFragment(Sprite):
+    def __init__(self, pos, xvel, yvel):
+        super().__init__(pos)
+        self.xvel = xvel
+        self.yvel = yvel
+        self.timer = 50
+        # crop rect - 4th frame of bomb
+        cropx,cropy = 4 * BOMB_FRAME_WIDTH,29  # Change value to crop different rect areas
+        self.cropRect = (cropx, cropy, 22, 27)
+    
+    def drawAndUpdate(self, DISPLAYSURF):
+        DISPLAYSURF.blit(BOMB,(self.pos[0] * TILESIZE, self.pos[1] * TILESIZE), self.cropRect)
+        self.timer -= 1
+        self.pos = (self.pos[0] + self.xvel, self.pos[1] + self.yvel)
+
+    def isDead(self):
+        return self.timer <= 0
 
 #use list comprehension to create our tilemap
 #tilemap = [ [DIRT for w in range(MAPWIDTH)] for h in range(MAPHEIGHT) ] 
 
 #set up the display
 pygame.init()
-DISPLAYSURF = pygame.display.set_mode((MAPWIDTH * TILESIZE, MAPHEIGHT*TILESIZE))
+DISPLAYSURF = pygame.display.set_mode((MAPWIDTH * TILESIZE, MAPHEIGHT * TILESIZE))
 
 #loop through each row
 # for rw in range(MAPHEIGHT):
@@ -91,15 +186,32 @@ def gameOnMessage_mainThread(msg):
         elif msgParts[1] == "PLAYERUPDATE":
             handlePlayerUpdate(msgParts[2:])
 
+def createSpeechBubble(text, pos):
+    s = SpeechBubble(text, (TILESIZE* (pos[0] + 5), TILESIZE * (pos[1] + 5)))
+    sprites.append(s)
+
+# parse something like: '[0, 8]' into a tuple of int's
+def parseLocation(s):
+    newLocationStr = s.replace("[","").replace("]","")
+    newLocationXY = newLocationStr.split(",")
+    return ( int(newLocationXY[0]), int(newLocationXY[1]) )
+
 def handlePlayerUpdate(msgPartsSub):
     print("handlePlayerUpdate: " + str(msgPartsSub))
     playerId = msgPartsSub[0]
+    
+    
     if playerId == myClientId:
+        # Its me - only message we listen for is SAYSOMETHING
+        
+        if msgPartsSub[1] == "SAYSOMETHING":
+            createSpeechBubble(msgPartsSub[2], playerPos)
+        
         # Its me - ignore
         return
     
     # it's someone else
-
+    
     # PLAYERCONNECTED
     # TODO: Parse other player's name? We already have their id if required
     if msgPartsSub[1] == "PLAYERCONNECTED":
@@ -126,10 +238,19 @@ def handlePlayerUpdate(msgPartsSub):
     # ['4', 'PLAYERMOVED', '[0, 8]']
     if msgPartsSub[1] == "PLAYERMOVED":
         print("handlePlayerUpdate: Move other player")
-        newLocationStr = msgPartsSub[2].replace("[","").replace("]","")
-        newLocationXY = newLocationStr.split(",")
-        otherPlayer.setLocation(int(newLocationXY[0]), int(newLocationXY[1]))
+        x,y = parseLocation(msgPartsSub[2])
+        otherPlayer.setLocation(x, y)
         return
+
+    # SAYSOMETHING
+    if msgPartsSub[1] == "SAYSOMETHING":
+        createSpeechBubble(msgPartsSub[2], otherPlayer.getLocation())
+
+    # DROPBOMB
+    if msgPartsSub[1] == "DROPBOMB":
+        x,y = parseLocation(msgPartsSub[2])
+        s = Bomb((x, y))
+        sprites.append(s)        
     
     print("handlePlayerUpdate: Not sure how to handle: " + str(msgPartsSub))
                   
@@ -163,6 +284,10 @@ def doAutomove(playerPos):
             autoMoveMode = 1
     return playerPos
 
+def saySomething(text):
+    print("saySomething: " + text)
+    chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": SAYSOMETHING: " + text)
+
 # Connect to server
 chatClient = ChatClient()
 HOST = 'localhost'
@@ -175,7 +300,10 @@ chatClient.connect(HOST, PORT, gameOnMessage, gameOnQuit)
 # print("myClientId2: " + myClientId2)
                       
 pygame.display.set_caption("gameclient - " + myClientId)
-                      
+
+w, h = pygame.display.get_surface().get_size()
+input_box1 = inputboxlibrary.InputBox(10, h - 35, 270, 32, saySomething)
+
 while True:
     #fill the background in black        
     DISPLAYSURF.fill(BLACK)
@@ -210,10 +338,16 @@ while True:
                 #change the player's x position
                 playerPos[1] += 1
                 moved = True
-            if event.key == K_SPACE:
+            if event.key == K_TAB:
                 automove = not automove
                 if automove:
                     autoMoveMode = 1
+            if event.key == K_b:
+                s = Bomb(playerPos.copy())
+                sprites.append(s)
+                chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": DROPBOMB: " + str(playerPos))
+        # send all events to input box also
+        input_box1.handle_event(event)
 
     if automove:
         doAutomove(playerPos)
@@ -242,9 +376,23 @@ while True:
     for otherPlayer in otherPlayersById.values():
         DISPLAYSURF.blit(OTHERPLAYER,(otherPlayer.location[0] * TILESIZE, otherPlayer.location[1] * TILESIZE)
                          )
-        
+    # display any sprites
+    anySpritesDead = False
+    for sprite in sprites:
+        sprite.drawAndUpdate(DISPLAYSURF)
+        anySpritesDead = anySpritesDead or sprite.isDead()
+    deathSpawnedNewSprites = []
+    if anySpritesDead:
+        for sprite in sprites:
+            if (sprite.isDead()):
+                sprites.remove(sprite)
+                deathSpawnedNewSprites = deathSpawnedNewSprites + sprite.onDeathSpawn()
+        sprites = sprites + deathSpawnedNewSprites
+    
+    # input box
+    input_box1.draw(DISPLAYSURF)
 
     #update the display
     pygame.display.update()
     #create a short delay
-    fpsClock.tick(24)
+    fpsClock.tick(FPS)
