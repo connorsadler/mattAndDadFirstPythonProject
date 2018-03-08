@@ -2,6 +2,13 @@
 multiplayergame2
 ----------------
 
+Update log:
+	08/03/2018
+	- added text box to allows players to talk to each other
+	- added Bombs! Press "b" to drop a box and watch it explode on your screen and other players screens
+	- changed "auto move" key to TAB
+
+
 Connors multiplayer game demo
 Heavily enhanced version of the chat room server
 Includes a pygame client which connects to this server
@@ -18,7 +25,7 @@ You can move the little man (face) around with the arrow keys
 It should show up on the other client also
 The "other player" on each client is shown in grey
 
-You can also press space to make each client automatically move around the edges of the screen
+You can also press Tab to make each client automatically move around the edges of the screen
 You can do this on both clients and see all the messages flying around
 
 You can even run a third or fourth game client and see what happens
