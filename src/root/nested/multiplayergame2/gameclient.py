@@ -66,6 +66,9 @@ class Sprite():
     def onDeathSpawn(self):
         return [];
     
+    def moveBy(self, xvel, yvel):
+        self.pos = (self.pos[0] + xvel, self.pos[1] + yvel)
+    
 class SpeechBubble(Sprite):
     def __init__(self, text, pos):
         super().__init__(pos)
@@ -79,7 +82,7 @@ class SpeechBubble(Sprite):
         self.timer -= 1
         self.colorredbright[0] -= 3
         if self.timer % 2 == 0:
-            self.pos = (self.pos[0], self.pos[1] + 1)
+            self.moveBy(0, 1)
     
     def isDead(self):
         return self.timer <= 0 or self.colorredbright[0] < 50
@@ -99,9 +102,9 @@ class Bomb(Sprite):
         self.timer -= 1
         
         # shake
-        xvel = self.timer % 3 + -1
+        xvel = self.timer % 3 - 1
         yvel = 1 - (self.timer % 3)
-        self.pos = (self.pos[0] + xvel, self.pos[1] + yvel)
+        self.moveBy(xvel, yvel)
         
         # every 25 frames, move the crop rect along the image so it shows a different part of the source bomb image
         # this is effectively a differently coloured bomb image frame
