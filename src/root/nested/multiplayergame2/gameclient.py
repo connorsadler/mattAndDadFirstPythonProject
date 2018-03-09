@@ -203,7 +203,6 @@ def handlePlayerUpdate(msgPartsSub):
     print("handlePlayerUpdate: " + str(msgPartsSub))
     playerId = msgPartsSub[0]
     
-    
     if playerId == myClientId:
         # Its me - only message we listen for is SAYSOMETHING
         
@@ -291,111 +290,128 @@ def saySomething(text):
     print("saySomething: " + text)
     chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": SAYSOMETHING: " + text)
 
-# Connect to server
-chatClient = ChatClient()
-HOST = 'localhost'
-PORT = '33000'
+chatClient = None
 
-chatClient.connect(HOST, PORT, gameOnMessage, gameOnQuit)
-
-# Alternate "client id" could be local port that we're connecting o
-# myClientId2 = chatClient.getClientId()
-# print("myClientId2: " + myClientId2)
-                      
-pygame.display.set_caption("gameclient - " + myClientId)
-
-w, h = pygame.display.get_surface().get_size()
-input_box1 = inputboxlibrary.InputBox(10, h - 35, 270, 32, saySomething)
-
-while True:
-    #fill the background in black        
-    DISPLAYSURF.fill(BLACK)
-
-    moved = False
-
-    #get all the user events
-    for event in pygame.event.get():
-        #if the user wants to quit
-        if event.type == QUIT:
-            #and the game and close the window
-            pygame.quit()
-            chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERDISCONNECTED")
-            chatClient.send("{quit}")
-            sys.exit()
-        #if a key is pressed
-        elif event.type == KEYDOWN:
-            #if the right arrow is pressed
-            if event.key == K_RIGHT and playerPos[0] < MAPWIDTH - 1:
-                #change the player's x position
-                playerPos[0] += 1
-                moved = True
-            if event.key == K_LEFT and playerPos[0] > 0:
-                #change the player's x position
-                playerPos[0] -= 1
-                moved = True
-            if event.key == K_UP and playerPos[1] > 0:
-                #change the player's x position
-                playerPos[1] -= 1
-                moved = True
-            if event.key == K_DOWN and playerPos[1] < MAPHEIGHT -1:
-                #change the player's x position
-                playerPos[1] += 1
-                moved = True
-            if event.key == K_TAB:
-                automove = not automove
-                if automove:
-                    autoMoveMode = 1
-            if event.key == K_b:
-                s = Bomb(playerPos.copy())
-                sprites.append(s)
-                chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": DROPBOMB: " + str(playerPos))
-        # send all events to input box also
-        input_box1.handle_event(event)
-
-    if automove:
-        doAutomove(playerPos)
-        moved = True
-
-    if moved:
-        chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERMOVED: " + str(playerPos))
-
-    if len(serverEvents) > 0:
-        serverEventsCopy = list(serverEvents)
-        serverEvents.clear()
-        for serverEvent in serverEventsCopy:
-            gameOnMessage_mainThread(serverEvent)
-                    
-#     #loop through each row
-#     for row in range(MAPHEIGHT):
-#         #loop through each column in the row
-#         for column in range(MAPWIDTH):
-#             #draw the resource at that position in the tilemap, using the correct image
-#             DISPLAYSURF.blit(textures[tilemap[row][column]], (column*TILESIZE,row*TILESIZE))
-        
-    #display the player at the correct position 
-    DISPLAYSURF.blit(PLAYER,(playerPos[0] * TILESIZE, playerPos[1] * TILESIZE)
-                     )
-    # display all other players
-    for otherPlayer in otherPlayersById.values():
-        DISPLAYSURF.blit(OTHERPLAYER,(otherPlayer.location[0] * TILESIZE, otherPlayer.location[1] * TILESIZE)
-                         )
-    # display any sprites
-    anySpritesDead = False
-    for sprite in sprites:
-        sprite.drawAndUpdate(DISPLAYSURF)
-        anySpritesDead = anySpritesDead or sprite.isDead()
-    deathSpawnedNewSprites = []
-    if anySpritesDead:
-        for sprite in sprites:
-            if (sprite.isDead()):
-                sprites.remove(sprite)
-                deathSpawnedNewSprites = deathSpawnedNewSprites + sprite.onDeathSpawn()
-        sprites = sprites + deathSpawnedNewSprites
+#
+# main code to run a game client
+# defaults to connecting to localhost unless a different IP address is passed in
+#
+def gameclientMain(HOST = 'localhost', PORT = '33000'):
+    global chatClient
+    global automove
+    global autoMoveMode
+    global sprites
     
-    # input box
-    input_box1.draw(DISPLAYSURF)
+    # Connect to server
+    chatClient = ChatClient()
+    
+    print("Connecting to HOST: " + HOST)
+    
+    chatClient.connect(HOST, PORT, gameOnMessage, gameOnQuit)
+    
+    # Alternate "client id" could be local port that we're connecting o
+    # myClientId2 = chatClient.getClientId()
+    # print("myClientId2: " + myClientId2)
+                          
+    pygame.display.set_caption("gameclient - " + myClientId)
+    
+    w, h = pygame.display.get_surface().get_size()
+    input_box1 = inputboxlibrary.InputBox(10, h - 35, 270, 32, saySomething)
+    
+    while True:
+        #fill the background in black        
+        DISPLAYSURF.fill(BLACK)
+    
+        moved = False
+    
+        #get all the user events
+        for event in pygame.event.get():
+            #if the user wants to quit
+            if event.type == QUIT:
+                #and the game and close the window
+                pygame.quit()
+                chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERDISCONNECTED")
+                chatClient.send("{quit}")
+                sys.exit()
+            #if a key is pressed
+            elif event.type == KEYDOWN:
+                #if the right arrow is pressed
+                if event.key == K_RIGHT and playerPos[0] < MAPWIDTH - 1:
+                    #change the player's x position
+                    playerPos[0] += 1
+                    moved = True
+                if event.key == K_LEFT and playerPos[0] > 0:
+                    #change the player's x position
+                    playerPos[0] -= 1
+                    moved = True
+                if event.key == K_UP and playerPos[1] > 0:
+                    #change the player's x position
+                    playerPos[1] -= 1
+                    moved = True
+                if event.key == K_DOWN and playerPos[1] < MAPHEIGHT -1:
+                    #change the player's x position
+                    playerPos[1] += 1
+                    moved = True
+                if event.key == K_TAB:
+                    automove = not automove
+                    if automove:
+                        autoMoveMode = 1
+                if event.key == K_b:
+                    s = Bomb(playerPos.copy())
+                    sprites.append(s)
+                    chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": DROPBOMB: " + str(playerPos))
+            # send all events to input box also
+            input_box1.handle_event(event)
+    
+        if automove:
+            doAutomove(playerPos)
+            moved = True
+    
+        if moved:
+            chatClient.send("MINECRAFT: PLAYERUPDATE: " + myClientId + ": PLAYERMOVED: " + str(playerPos))
+    
+        if len(serverEvents) > 0:
+            serverEventsCopy = list(serverEvents)
+            serverEvents.clear()
+            for serverEvent in serverEventsCopy:
+                gameOnMessage_mainThread(serverEvent)
+                        
+    #     #loop through each row
+    #     for row in range(MAPHEIGHT):
+    #         #loop through each column in the row
+    #         for column in range(MAPWIDTH):
+    #             #draw the resource at that position in the tilemap, using the correct image
+    #             DISPLAYSURF.blit(textures[tilemap[row][column]], (column*TILESIZE,row*TILESIZE))
+            
+        #display the player at the correct position 
+        DISPLAYSURF.blit(PLAYER,(playerPos[0] * TILESIZE, playerPos[1] * TILESIZE)
+                         )
+        # display all other players
+        for otherPlayer in otherPlayersById.values():
+            DISPLAYSURF.blit(OTHERPLAYER,(otherPlayer.location[0] * TILESIZE, otherPlayer.location[1] * TILESIZE)
+                             )
+        # display any sprites
+        anySpritesDead = False
+        for sprite in sprites:
+            sprite.drawAndUpdate(DISPLAYSURF)
+            anySpritesDead = anySpritesDead or sprite.isDead()
+        deathSpawnedNewSprites = []
+        if anySpritesDead:
+            for sprite in sprites:
+                if (sprite.isDead()):
+                    sprites.remove(sprite)
+                    deathSpawnedNewSprites = deathSpawnedNewSprites + sprite.onDeathSpawn()
+            sprites = sprites + deathSpawnedNewSprites
+        
+        # input box
+        input_box1.draw(DISPLAYSURF)
+    
+        #update the display
+        pygame.display.update()
+        #create a short delay
+        fpsClock.tick(FPS)
 
-    #update the display
-    pygame.display.update()
-    #create a short delay
-    fpsClock.tick(FPS)
+
+if __name__ == '__main__':
+    # This is the code running when you run this file directly
+    gameclientMain()

@@ -5,6 +5,7 @@
 # 
 
 from socket import AF_INET, socket, SOCK_STREAM
+
 from threading import Thread
 import threading
 import time
@@ -19,6 +20,10 @@ PORT = 33000
 ADDR = (HOST, PORT)
 SERVER = socket(AF_INET, SOCK_STREAM)
 SERVER.bind(ADDR)
+
+import socket as sock
+serverIP = sock.gethostbyname_ex(sock.gethostname())
+print("Server running on: " + str(serverIP))
 
 def printex(msg):
     threadName = threading.currentThread().name
