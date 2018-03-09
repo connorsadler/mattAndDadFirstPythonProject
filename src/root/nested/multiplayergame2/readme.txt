@@ -3,10 +3,12 @@ multiplayergame2
 ----------------
 
 Update log:
+	09/03/2018
+		- to run from a different client, please run "gameclient different machine.py"
 	08/03/2018
-	- added text box to allows players to talk to each other
-	- added Bombs! Press "b" to drop a box and watch it explode on your screen and other players screens
-	- changed "auto move" key to TAB
+		- added text box to allows players to talk to each other
+		- added Bombs! Press "b" to drop a box and watch it explode on your screen and other players screens
+		- changed "auto move" key to TAB
 
 
 Connors multiplayer game demo
