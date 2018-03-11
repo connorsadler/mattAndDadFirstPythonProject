@@ -1,0 +1,6 @@
+
+11/03/2018
+- Game state stored on server side, so it can be propogated to new clients
+- persistent game state, so map reappears when server is stopped/started
+- fix errors on server side when client disconnects
+- fix server side when a client gives an error, it should remove it from the list of clients
