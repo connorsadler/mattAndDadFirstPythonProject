@@ -1,6 +1,26 @@
 
 11/03/2018
+
 - Game state stored on server side, so it can be propogated to new clients
+- make some persistent game state e.g. minecraft map
 - persistent game state, so map reappears when server is stopped/started
 - fix errors on server side when client disconnects
 - fix server side when a client gives an error, it should remove it from the list of clients
+
+- client showing whether it's connected to the server
+- client
+	- make current player a sprite
+
+- multiple messages improvements
+	- remove padding hack
+	- allow multiple messages to be sent and processed in one socket message
+
+- display name against each player?
+
+- code reorg
+	- server
+		- ???
+		
+	- client
+		- make it easier to add sprites
+		- game engine logic in a new file?

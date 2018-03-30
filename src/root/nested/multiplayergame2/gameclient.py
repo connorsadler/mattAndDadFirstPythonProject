@@ -7,6 +7,7 @@ import pygame, sys, random
 from pygame.locals import *
 from variables import *
 import random
+from debug import DEBUG
 
 #--------------------------------------------------
 # Minecraft 2D - Heavily modified for multiplayer
@@ -177,7 +178,8 @@ def gameOnQuit():
 
 def gameOnMessage_mainThread(msg):
     global myClientId
-    print("gameOnMessage_mainThread: message from server: " + msg)
+    if DEBUG:
+        print("gameOnMessage_mainThread: message from server: " + msg)
     idx = msg.find("MINECRAFT:")
     if idx != -1:
         msgMinecraft = msg[idx:]

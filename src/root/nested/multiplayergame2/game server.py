@@ -12,6 +12,7 @@ import time
 import random
 import sys
 from netutils import *
+from debug import DEBUG
 
 clients = {}
 addresses = {}
@@ -99,7 +100,8 @@ lock = threading.Lock()
 #
 def broadcast(msg, prefix=""):  
     threadName = threading.currentThread().name
-    print(threadName + ' >>> broadcast: ', msg)
+    if DEBUG:
+        print(threadName + ' >>> broadcast: ', msg)
 
     # prevent multiple client processing threads broadcasting at the same time
     with lock:
@@ -116,7 +118,8 @@ def broadcast(msg, prefix=""):
             except ConnectionResetError:
                 print("ConnectionResetError - skipping this client")
     
-    print(threadName + ' <<< broadcast: ', msg)
+    if DEBUG:
+        print(threadName + ' <<< broadcast: ', msg)
 
 #
 # Server background game logic thread

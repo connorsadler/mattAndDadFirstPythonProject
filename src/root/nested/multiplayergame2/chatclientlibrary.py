@@ -1,6 +1,7 @@
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 from netutils import *
+from debug import DEBUG
 
 class ChatClient():
     def __init__(self):
@@ -44,7 +45,8 @@ class ChatClient():
     # Optionally pads the message to a certain length
     # event is passed by binders
     def send(self, msg, padToLength = -1):
-        print("ChatClient sending: " + msg)
+        if DEBUG:
+            print("ChatClient sending: " + msg)
         if padToLength > 0:
             msg2 = msg.ljust(padToLength)
         else:
