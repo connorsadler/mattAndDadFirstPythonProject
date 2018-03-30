@@ -14,7 +14,7 @@ fpsClock = pygame.time.Clock()
 MAPWIDTH  = 500
 MAPHEIGHT = 500
 
-FPS = 60
+FPS = 160
 
 black = (0,0,0)
 white = (255,255,255)
@@ -77,18 +77,57 @@ class Player(Sprite):
         #                     playeryvel = 0
             
     def drawAndUpdate(self, DISPLAYSURF):
+        #
+        # TRAIL MANAMGEMENT
+        #
         # add item to end of trail
         self.trail.append(self.pos)
-        # remove start of trail i.e. "tail" of snake
+        # remove "tail" of snake
         if len(self.trail) > self.snakelength:
             self.trail.popleft()
-        
+        # increase length randomly
         if random.randint(0,100) > 75:
             self.snakelength += 1
         
-        self.moveBy(self.playerxvel,self.playeryvel)
+        #
+        # CHECK SCROLLING OR JUST MOVING WITHIN CENTRE OF PLAY AREA
+        #
+        # check if we're near the edge of the screen and heading towards that edge
+        scrollx = 0
+        if self.pos[0] >= MAPWIDTH-100 and self.playerxvel == 1:
+            scrollx = 1
+        if self.pos[0] <= 100 and self.playerxvel == -1:
+            scrollx = -1
+        scrolly = 0
+        if self.pos[1] >= MAPHEIGHT-100 and self.playeryvel == 1:
+            scrolly = 1
+        if self.pos[1] <= 100 and self.playeryvel == -1:
+            scrolly = -1
+        scrolling = scrollx != 0 or scrolly != 0
+
+        #
+        # MOVE OR SCROLL
+        #
+        if not scrolling:
+            # move "head" of snake onscreen
+            self.moveBy(self.playerxvel,self.playeryvel)
+        else:
+            # instead of moving our snake, we "scroll" everything else
+            for sprite in sprites:
+                if isinstance(sprite, Apple):
+                    sprite.moveBy(-1 * scrollx, -1 * scrolly)
+            # we need to scroll our trail also
+            newtrail = []
+            for trailitem in self.trail:
+                newtrailitem = (trailitem[0] + (-1 * scrollx), trailitem[1] + (-1 * scrolly))
+                newtrail.append(newtrailitem)
+            self.trail.clear()
+            self.trail.extend(newtrail)
         
-        # draw self
+        #
+        # DRAWING
+        #
+        # draw "head" of snake at self.pos
         super().drawAndUpdate(DISPLAYSURF)
         # draw trail
         for trailitem in self.trail:
@@ -105,14 +144,15 @@ class AppleGenerator(Sprite):
 
 class Apple(Sprite):
     def __init__(self):
-        super().__init__((random.randint(0, MAPWIDTH),0))
+        super().__init__((random.randint(0, MAPWIDTH), random.randint(0, MAPHEIGHT)))
 
     def drawAndUpdate(self, DISPLAYSURF):
-        self.moveBy(0, 1)
+        #self.moveBy(0, 1)
         pygame.draw.circle(DISPLAYSURF, red, self.pos, 5)
     
     def isDead(self):
-        return self.pos[1] > MAPHEIGHT
+        #return self.pos[1] > MAPHEIGHT
+        pass
     
 
 # Player is the snake + trail 
@@ -132,7 +172,7 @@ def gameclientMain():
     
     pygame.display.set_caption("snakepygame")
     
-    w, h = pygame.display.get_surface().get_size()
+    #w, h = pygame.display.get_surface().get_size()
     tick = 0
 
     while True:
