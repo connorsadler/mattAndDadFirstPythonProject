@@ -128,23 +128,25 @@ class Player(Sprite):
         #
         # DRAWING
         #
+        # draw trail
+        for trailitem in self.trail:
+            DISPLAYSURFX.pygame_draw_rect(black, [trailitem[0], trailitem[1], 20, 20])    
+
         # draw "head" of snake at self.pos
         ###super().drawAndUpdate(DISPLAYSURFX)
         if self.frame < 50:
             startAngle = self.piDividedBy2 - (self.frame * self.angleMovePerFrame)
         else:
             startAngle = (self.frame - 50) * self.angleMovePerFrame
-        DISPLAYSURFX.pygame_draw_arc(red, [self.pos[0], self.pos[1], 50, 50], startAngle, -1 * startAngle)
-        centrex = self.pos[0]+25
-        centrey = self.pos[1]+25
-        cosStartAngle = 24 * cos(startAngle)
-        sinStartAngle = 24 * sin(startAngle)
+        DISPLAYSURFX.fill(white, [self.pos[0], self.pos[1], 25, 25])
+        DISPLAYSURFX.pygame_draw_arc(red, [self.pos[0], self.pos[1], 25, 25], startAngle, -1 * startAngle)
+        centrex = self.pos[0]+12
+        centrey = self.pos[1]+12
+        cosStartAngle = 12 * cos(startAngle)
+        sinStartAngle = 12 * sin(startAngle)
         DISPLAYSURFX.pygame_draw_line(red, centrex, centrey, centrex + cosStartAngle, centrey + sinStartAngle)
         DISPLAYSURFX.pygame_draw_line(red, centrex, centrey, centrex + cosStartAngle, centrey - sinStartAngle)
         
-        # draw trail
-        for trailitem in self.trail:
-            DISPLAYSURFX.pygame_draw_rect(black, [trailitem[0], trailitem[1], 20, 20])    
 
 
 class AppleGenerator(Sprite):
@@ -177,8 +179,10 @@ class DisplaySurfaceWithScrolling():
         self.offsetx = 0
         self.offsety = 0
         
-    def fill(self, color):
-        self.DISPLAYSURF.fill(color)
+    def fill(self, color, rect = None):
+        if rect != None:
+            rect = self.transformRect(rect)
+        self.DISPLAYSURF.fill(color, rect)
     
     def scrollBy(self, scrollx, scrolly):
         self.offsetx += scrollx
@@ -196,7 +200,8 @@ class DisplaySurfaceWithScrolling():
         return [self.transformx(rect[0]), self.transformy(rect[1]), rect[2], rect[3]]
     
     def pygame_draw_rect(self, color, rect):
-        pygame.draw.rect(self.DISPLAYSURF, black, self.transformRect(rect))
+        ###pygame.draw.rect(self.DISPLAYSURF, black, self.transformRect(rect))
+        self.DISPLAYSURF.fill(color, self.transformRect(rect))
     
     def pygame_draw_circle(self, color, pos, radius):
         pygame.draw.circle(self.DISPLAYSURF, color, (self.transformx(pos[0]), self.transformy(pos[1])), radius)
