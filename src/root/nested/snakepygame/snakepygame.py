@@ -2,6 +2,7 @@ import pygame, sys, random
 from pygame.locals import *
 from collections import deque
 from math import pi, sin, cos, tan
+from test.test_pkg import fixdir
 
 #--------------------------------------------------
 # Snake in pygame
@@ -44,6 +45,86 @@ class Sprite():
     def moveBy(self, xvel, yvel):
         self.pos = (self.pos[0] + xvel, self.pos[1] + yvel)
 
+class SnakeSection():
+    def __init__(self, x,y, width,height, xdir, ydir):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        # xdir/ydir specify the direction we're "pointing"
+        self.xdir = xdir
+        self.ydir = ydir
+    
+    def draw(self, DISPLAYSURFX):
+        DISPLAYSURFX.pygame_draw_rect(red, [self.x, self.y, self.width, self.height])
+    
+    def isDirectionCompatibleWith(self, pos):
+        # We have no direction so we're always compatible with a position
+        if self.xdir == 0 and self.ydir == 0:
+            return True
+        
+        if self.xdir != 0:
+            # we're moving in the x direction, so y coords must be same to be compatible
+            return pos[1] == self.y
+        else:
+            # we're moving in the y direction, so x coords must be same to be compatible
+            return pos[0] == self.x
+    
+    def expandToInclude(self, pos):
+        # no direction - deduce direction
+        if self.xdir == 0 and self.ydir == 0:
+            if self.x == pos[0]:
+                self.ydir = pos[1] - self.y
+            else:
+                self.xdir = pos[0] - self.x 
+            print("deduced direction of section:")
+            print("  xdir: " + str(self.xdir))
+            print("  ydir: " + str(self.ydir))
+        
+        # check direction and expand section rectangle in appropriate direction
+        if self.xdir != 0:
+            if self.xdir > 0:
+                self.width += 1
+            else:
+                self.x -= 1
+                self.width += 1
+        elif self.ydir != 0:
+            if self.ydir > 0:
+                self.height += 1
+            else:
+                self.y -= 1
+                self.height += 1
+        else:
+            pass
+
+class SnakeTrail():
+    def __init__(self, pos):
+        # trail2 is the replacement for trail - it's a dequeue of SnakeSection items
+        self.trail2 = deque()
+        self.trail2.append(SnakeSection(pos[0], pos[1], 5, 5, 0, 0))
+    
+    # move head of snake to pos specified
+    def moveHead(self, pos):
+        # last entry of list uses this "-1" syntax
+        headSection = self.trail2[-1]
+        if headSection.isDirectionCompatibleWith(pos):
+            headSection.expandToInclude(pos)
+        else:
+            # create a new section
+            newHeadSection = SnakeSection(pos[0], pos[1], 5, 5, 0, 0)
+            self.trail2.append(newHeadSection)
+    
+    def shrinkTail(self):
+        # cfstodo: needs to reduce the rectangle of this section
+        # cfstodo: ... and if the new rectangle is now null, remove the section from the snake!
+        pass
+    
+    def drawAll(self, DISPLAYSURFX):
+        for snakeSection in self.trail2:
+            snakeSection.draw(DISPLAYSURFX)
+    
+    
+
 class Player(Sprite):
     def __init__(self, pos):
         super().__init__(pos)
@@ -52,6 +133,9 @@ class Player(Sprite):
         # trail is a queue of position (x,y) tuples
         # leftmost entry is "tail" of our snake, and rightmost entry is "head"
         self.trail = deque(maxlen = 5000)
+        # trail2 is the replacement for trail
+        self.trail2 = SnakeTrail(pos)
+        
         # length of snake i.e. max entries in trail
         self.snakelength = 50
         # frame of animation
@@ -96,9 +180,12 @@ class Player(Sprite):
         #
         # add item to end of trail
         self.trail.append(self.pos)
+        self.trail2.moveHead(self.pos)
+        
         # remove "tail" of snake
         if len(self.trail) > self.snakelength:
             self.trail.popleft()
+            self.trail2.shrinkTail()
         # increase length randomly
         if random.randint(0,100) > 75:
             self.snakelength += 1
@@ -130,7 +217,8 @@ class Player(Sprite):
         #
         # draw trail
         for trailitem in self.trail:
-            DISPLAYSURFX.pygame_draw_rect(black, [trailitem[0], trailitem[1], 20, 20])    
+            DISPLAYSURFX.pygame_draw_rect(black, [trailitem[0], trailitem[1], 20, 20])
+        self.trail2.drawAll(DISPLAYSURFX)
 
         # draw "head" of snake at self.pos
         ###super().drawAndUpdate(DISPLAYSURFX)
